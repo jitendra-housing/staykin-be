@@ -62,3 +62,19 @@ class Frequency(str, enum.Enum):
     OFTEN = "OFTEN"
     SOMETIMES = "SOMETIMES"
     RARELY = "RARELY"
+
+
+class ListingGenderPref(str, enum.Enum):
+    GIRLS_ONLY = "GIRLS_ONLY"
+    BOYS_ONLY = "BOYS_ONLY"
+    MIXED = "MIXED"
+
+
+class Amenity(str, enum.Enum):
+    PARKING = "PARKING"
+    AC = "AC"
+    KITCHEN = "KITCHEN"
+    WASHING_MACHINE = "WASHING_MACHINE"
+    LIFT = "LIFT"
+    BALCONY = "BALCONY"
+    POOL = "POOL"

@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     postgres_password: str = "staykin"
     postgres_db: str = "staykin"
 
+    imagekit_public_key: str = ""
+    imagekit_private_key: str = ""
+    imagekit_url_endpoint: str = ""
+
     @property
     def database_url(self) -> str:
         return (
