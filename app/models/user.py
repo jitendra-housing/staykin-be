@@ -7,15 +7,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.db import Base
 from app.models.enums import (
     BHK,
-    Cleanliness,
-    FoodPref,
-    Frequency,
     Furnishing,
     Gender,
     MoveIn,
     RoomType,
-    SleepSchedule,
-    YesNoSometimes,
 )
 
 
@@ -31,29 +26,8 @@ class User(Base):
     occupation: Mapped[str | None] = mapped_column(String(120))
     photo_url: Mapped[str | None] = mapped_column(String(512))
 
-    # Lifestyle
-    sleep_schedule: Mapped[SleepSchedule | None] = mapped_column(
-        Enum(SleepSchedule, name="sleep_schedule")
-    )
-    cleanliness: Mapped[Cleanliness | None] = mapped_column(Enum(Cleanliness, name="cleanliness"))
-    smoking: Mapped[YesNoSometimes | None] = mapped_column(
-        Enum(YesNoSometimes, name="smoking_pref")
-    )
-    drinking: Mapped[YesNoSometimes | None] = mapped_column(
-        Enum(YesNoSometimes, name="drinking_pref")
-    )
-    food_pref: Mapped[FoodPref | None] = mapped_column(Enum(FoodPref, name="food_pref"))
-    pets: Mapped[YesNoSometimes | None] = mapped_column(Enum(YesNoSometimes, name="pets_pref"))
-    guests_frequency: Mapped[Frequency | None] = mapped_column(
-        Enum(Frequency, name="guests_frequency")
-    )
-    work_from_home: Mapped[Frequency | None] = mapped_column(
-        Enum(Frequency, name="wfh_frequency")
-    )
-    noise_tolerance: Mapped[Frequency | None] = mapped_column(
-        Enum(Frequency, name="noise_tolerance")
-    )
-    languages: Mapped[list[str] | None] = mapped_column(ARRAY(String(40)))
+    # Lifestyle: ids reference the static LIFESTYLE_TAGS constant (5–10 enforced in schema).
+    lifestyle_tag_ids: Mapped[list[int] | None] = mapped_column(ARRAY(Integer))
 
     # Search prefs
     preferred_locality_ids: Mapped[list[int] | None] = mapped_column(ARRAY(Integer))

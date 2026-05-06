@@ -1,19 +1,32 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.db.seeds.lifestyle_tags import (
+    MAX_TAGS,
+    MIN_TAGS,
+    VALID_LIFESTYLE_TAG_IDS,
+)
 from app.models.enums import (
     BHK,
-    Cleanliness,
-    FoodPref,
-    Frequency,
     Furnishing,
     Gender,
     MoveIn,
     RoomType,
-    SleepSchedule,
-    YesNoSometimes,
 )
+
+
+def _validate_tag_ids(v: list[int] | None) -> list[int] | None:
+    if v is None or len(v) == 0:
+        return v
+    if len(v) != len(set(v)):
+        raise ValueError("lifestyle_tag_ids must be unique")
+    invalid = sorted(set(v) - VALID_LIFESTYLE_TAG_IDS)
+    if invalid:
+        raise ValueError(f"unknown lifestyle_tag_ids: {invalid}")
+    if not (MIN_TAGS <= len(v) <= MAX_TAGS):
+        raise ValueError(f"select between {MIN_TAGS} and {MAX_TAGS} lifestyle tags")
+    return v
 
 
 class UserUpsert(BaseModel):
@@ -24,16 +37,7 @@ class UserUpsert(BaseModel):
     occupation: str | None = None
     photo_url: str | None = None
 
-    sleep_schedule: SleepSchedule | None = None
-    cleanliness: Cleanliness | None = None
-    smoking: YesNoSometimes | None = None
-    drinking: YesNoSometimes | None = None
-    food_pref: FoodPref | None = None
-    pets: YesNoSometimes | None = None
-    guests_frequency: Frequency | None = None
-    work_from_home: Frequency | None = None
-    noise_tolerance: Frequency | None = None
-    languages: list[str] | None = None
+    lifestyle_tag_ids: list[int] | None = None
 
     preferred_locality_ids: list[int] | None = None
     budget_min: int | None = None
@@ -44,6 +48,11 @@ class UserUpsert(BaseModel):
     move_in_pref: MoveIn | None = None
     move_in_date: date | None = None
     gender_pref: Gender | None = None
+
+    @field_validator("lifestyle_tag_ids")
+    @classmethod
+    def _vld_tags(cls, v: list[int] | None) -> list[int] | None:
+        return _validate_tag_ids(v)
 
 
 class UserUpdate(UserUpsert):
@@ -61,16 +70,7 @@ class UserOut(BaseModel):
     occupation: str | None
     photo_url: str | None
 
-    sleep_schedule: SleepSchedule | None
-    cleanliness: Cleanliness | None
-    smoking: YesNoSometimes | None
-    drinking: YesNoSometimes | None
-    food_pref: FoodPref | None
-    pets: YesNoSometimes | None
-    guests_frequency: Frequency | None
-    work_from_home: Frequency | None
-    noise_tolerance: Frequency | None
-    languages: list[str] | None
+    lifestyle_tag_ids: list[int] | None
 
     preferred_locality_ids: list[int] | None
     budget_min: int | None

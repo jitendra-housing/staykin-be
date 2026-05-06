@@ -34,36 +34,6 @@ class MoveIn(str, enum.Enum):
     ONE_TO_THREE_MONTHS = "ONE_TO_THREE_MONTHS"
 
 
-class SleepSchedule(str, enum.Enum):
-    EARLY_BIRD = "EARLY_BIRD"
-    NIGHT_OWL = "NIGHT_OWL"
-    FLEXIBLE = "FLEXIBLE"
-
-
-class Cleanliness(str, enum.Enum):
-    VERY_TIDY = "VERY_TIDY"
-    AVERAGE = "AVERAGE"
-    RELAXED = "RELAXED"
-
-
-class YesNoSometimes(str, enum.Enum):
-    YES = "YES"
-    NO = "NO"
-    SOMETIMES = "SOMETIMES"
-
-
-class FoodPref(str, enum.Enum):
-    VEG = "VEG"
-    NON_VEG = "NON_VEG"
-    EGGITARIAN = "EGGITARIAN"
-
-
-class Frequency(str, enum.Enum):
-    OFTEN = "OFTEN"
-    SOMETIMES = "SOMETIMES"
-    RARELY = "RARELY"
-
-
 class ListingGenderPref(str, enum.Enum):
     GIRLS_ONLY = "GIRLS_ONLY"
     BOYS_ONLY = "BOYS_ONLY"
