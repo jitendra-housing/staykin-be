@@ -48,3 +48,20 @@ class Amenity(str, enum.Enum):
     LIFT = "LIFT"
     BALCONY = "BALCONY"
     POOL = "POOL"
+
+
+class RequestTargetKind(str, enum.Enum):
+    USER = "USER"
+    TEAM = "TEAM"
+
+
+class RequestStatus(str, enum.Enum):
+    IN_PROGRESS = "IN_PROGRESS"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+
+
+class DecisionStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
