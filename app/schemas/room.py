@@ -15,8 +15,14 @@ class RoomOut(BaseModel):
 
     id: int
     request_id: int
+    flatmate_team_id: int | None
+    add_flatmate_enabled: bool
     created_at: datetime
 
 
 class RoomDetailOut(RoomOut):
     participants: list[RoomParticipantOut]
+
+
+class AddFlatmateAction(BaseModel):
+    user_id: int
