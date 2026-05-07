@@ -82,9 +82,25 @@ async def get_profile(
     user_id: int,
     db: AsyncSession = Depends(get_db),
     viewer_id: int | None = Query(
-        None, description="logged-in user id, used to compute vibe_score"
+        None,
+        description=(
+            "Logged-in user id of whoever is viewing this profile. "
+            "REQUIRED to populate `vibe_score`; without it, `vibe_score` is null. "
+            "When viewing your own profile (viewer_id == user_id), `vibe_score` "
+            "is also null by design."
+        ),
     ),
 ) -> UserOut:
+    """Fetch a user's profile.
+
+    The response includes a `vibe_score` (0-100 lifestyle compatibility
+    between the viewer and this profile owner) only when:
+      - `viewer_id` is provided in the query string, AND
+      - `viewer_id` is different from `user_id` (i.e. not your own profile), AND
+      - both users have at least one lifestyle tag selected.
+
+    Otherwise `vibe_score` is null.
+    """
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="profile not found")

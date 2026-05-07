@@ -109,7 +109,14 @@ class UserOut(BaseModel):
     listing_ids: list[int] = []
     team_member_ids: list[int] = []
 
-    vibe_score: int | None = None
+    vibe_score: int | None = Field(
+        default=None,
+        description=(
+            "Lifestyle compatibility (0-100) between the viewer and this user. "
+            "Populated only when the request supplies `viewer_id` and viewer != user, "
+            "and both users have lifestyle tags. Otherwise null."
+        ),
+    )
 
     created_at: datetime
     updated_at: datetime
