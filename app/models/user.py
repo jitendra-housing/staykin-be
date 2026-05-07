@@ -15,7 +15,7 @@ class User(Base):
     name: Mapped[str | None] = mapped_column(String(120))
     age: Mapped[int | None] = mapped_column(Integer)
     gender: Mapped[int | None] = mapped_column(Integer)
-    occupation: Mapped[str | None] = mapped_column(String(120))
+    occupation: Mapped[int | None] = mapped_column(Integer)
     photo_url: Mapped[str | None] = mapped_column(String(512))
 
     # Lifestyle: ids reference LIFESTYLE_TAGS (5–10 enforced in schema).

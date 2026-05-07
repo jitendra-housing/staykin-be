@@ -5,6 +5,7 @@ from app.routers import (
     lifestyle_tags,
     listings,
     localities,
+    occupations,
     profile,
     requests,
     rooms,
@@ -18,6 +19,7 @@ app.include_router(health.router)
 app.include_router(profile.router)
 app.include_router(localities.router)
 app.include_router(lifestyle_tags.router)
+app.include_router(occupations.router)
 app.include_router(listings.router)
 app.include_router(uploads.router)
 app.include_router(teams.router)

@@ -11,6 +11,7 @@ from app.db.seeds.lifestyle_tags import (
     VALID_LIFESTYLE_TAG_IDS,
 )
 from app.db.seeds.move_ins import VALID_MOVE_IN_IDS
+from app.db.seeds.occupations import VALID_OCCUPATION_IDS
 from app.db.seeds.room_types import VALID_ROOM_TYPE_IDS
 from app.schemas._validators import validate_id, validate_id_list
 
@@ -20,7 +21,7 @@ class UserUpsert(BaseModel):
     name: str | None = None
     age: int | None = Field(default=None, ge=16, le=100)
     gender: int | None = None
-    occupation: str | None = None
+    occupation: int | None = None
     photo_url: str | None = None
 
     lifestyle_tag_ids: list[int] | None = None
@@ -39,6 +40,11 @@ class UserUpsert(BaseModel):
     @classmethod
     def _vld_gender(cls, v: int | None) -> int | None:
         return validate_id(v, VALID_GENDER_IDS, "gender")
+
+    @field_validator("occupation")
+    @classmethod
+    def _vld_occupation(cls, v: int | None) -> int | None:
+        return validate_id(v, VALID_OCCUPATION_IDS, "occupation")
 
     @field_validator("gender_pref")
     @classmethod
@@ -85,7 +91,7 @@ class UserOut(BaseModel):
     name: str | None
     age: int | None
     gender: int | None
-    occupation: str | None
+    occupation: int | None
     photo_url: str | None
 
     lifestyle_tag_ids: list[int] | None

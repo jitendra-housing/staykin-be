@@ -1,0 +1,40 @@
+"""Occupation options. DB stores integer ids."""
+
+# (id, name)
+OCCUPATIONS: list[tuple[int, str]] = [
+    (1, "Software Engineer"),
+    (2, "Product Manager"),
+    (3, "Designer"),
+    (4, "Data Analyst"),
+    (5, "Consultant"),
+    (6, "Marketing Professional"),
+    (7, "Sales Professional"),
+    (8, "HR Professional"),
+    (9, "Finance Professional"),
+    (10, "Entrepreneur"),
+    (11, "Freelancer"),
+    (12, "Content Creator"),
+    (13, "Photographer"),
+    (14, "Video Editor"),
+    (15, "Writer"),
+    (16, "Doctor"),
+    (17, "Lawyer"),
+    (18, "Chartered Accountant"),
+    (19, "Teacher"),
+    (20, "Student"),
+    (21, "Research Scholar"),
+    (22, "Architect"),
+    (23, "Interior Designer"),
+    (24, "Chef"),
+    (25, "Fitness Trainer"),
+    (26, "Event Manager"),
+    (27, "Government Employee"),
+    (28, "Startup Founder"),
+    (29, "Business Owner"),
+    (30, "Remote Worker"),
+    (31, "Intern"),
+    (32, "Self-employed"),
+    (33, "Other"),
+]
+
+VALID_OCCUPATION_IDS: frozenset[int] = frozenset(o[0] for o in OCCUPATIONS)
