@@ -2,8 +2,8 @@
 
 # (id, value, label)
 LISTING_GENDER_PREFS: list[tuple[int, str, str]] = [
-    (1, "GIRLS_ONLY", "Girls Only"),
-    (2, "BOYS_ONLY", "Boys Only"),
+    (1, "GIRLS_ONLY", "Girls only"),
+    (2, "BOYS_ONLY", "Boys only"),
     (3, "MIXED", "Mixed"),
 ]
 

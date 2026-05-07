@@ -1,11 +1,9 @@
 from datetime import datetime
 
 from sqlalchemy import ARRAY, DateTime, ForeignKey, Integer, String, func
-from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
-from app.models.enums import Amenity
 
 
 class Listing(Base):
@@ -24,9 +22,7 @@ class Listing(Base):
     furnishing: Mapped[int] = mapped_column(Integer, nullable=False)
     flatmates_needed: Mapped[int] = mapped_column(Integer, nullable=False)
     gender_pref: Mapped[int] = mapped_column(Integer, nullable=False)
-    amenities: Mapped[list[Amenity] | None] = mapped_column(
-        ARRAY(PgEnum(Amenity, name="amenity", create_type=False))
-    )
+    amenities: Mapped[list[int] | None] = mapped_column(ARRAY(Integer))
     move_in: Mapped[int] = mapped_column(Integer, nullable=False)
     photos: Mapped[list[str] | None] = mapped_column(ARRAY(String(512)))
 
