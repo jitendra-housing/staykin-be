@@ -8,3 +8,7 @@ GENDERS: list[tuple[int, str, str]] = [
 ]
 
 VALID_GENDER_IDS: frozenset[int] = frozenset(g[0] for g in GENDERS)
+
+GENDER_MALE = 1
+GENDER_FEMALE = 2
+GENDER_OTHER = 3
