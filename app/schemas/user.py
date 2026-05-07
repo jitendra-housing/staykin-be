@@ -107,6 +107,7 @@ class UserOut(BaseModel):
     gender_pref: int | None
 
     listing_ids: list[int] = []
+    team_member_ids: list[int] = []
 
     created_at: datetime
     updated_at: datetime
