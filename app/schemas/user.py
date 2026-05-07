@@ -83,6 +83,10 @@ class UserUpdate(UserUpsert):
     phone: str | None = Field(default=None, min_length=7, max_length=20)
 
 
+class PhoneLookupOut(BaseModel):
+    user_id: int
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
