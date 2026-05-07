@@ -3,6 +3,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
+from app.db.seeds.genders import GENDER_FEMALE, GENDER_MALE, GENDER_OTHER
+from app.db.seeds.listing_gender_prefs import (
+    LISTING_GENDER_PREF_BOYS_ONLY,
+    LISTING_GENDER_PREF_GIRLS_ONLY,
+    LISTING_GENDER_PREF_MIXED,
+)
 from app.models.listing import Listing
 from app.models.user import User
 from app.schemas.listing import ListingCreate, ListingOut, ListingUpdate
@@ -28,24 +34,36 @@ async def create_listing(
 @router.get("", response_model=list[ListingOut])
 async def list_listings(
     db: AsyncSession = Depends(get_db),
-    locality_id: int | None = Query(default=None),
-    bhk: int | None = Query(default=None),
-    max_rent: int | None = Query(default=None, ge=0),
-    gender_pref: int | None = Query(default=None),
-    move_in: int | None = Query(default=None),
+    user_id: int = Query(..., description="viewing user's id; filters from their profile prefs"),
 ) -> list[Listing]:
-    stmt = select(Listing).order_by(Listing.created_at.desc())
-    if locality_id is not None:
-        stmt = stmt.where(Listing.locality_id == locality_id)
-    if bhk is not None:
-        stmt = stmt.where(Listing.bhk == bhk)
-    if max_rent is not None:
-        stmt = stmt.where(Listing.monthly_rent <= max_rent)
-    if gender_pref is not None:
-        stmt = stmt.where(Listing.gender_pref == gender_pref)
-    if move_in is not None:
-        stmt = stmt.where(Listing.move_in == move_in)
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="user not found")
 
+    stmt = select(Listing).where(Listing.owner_user_id != user_id)
+
+    if user.preferred_locality_ids:
+        stmt = stmt.where(Listing.locality_id.in_(user.preferred_locality_ids))
+    if user.bhk_prefs:
+        stmt = stmt.where(Listing.bhk.in_(user.bhk_prefs))
+    if user.budget_max is not None:
+        stmt = stmt.where(Listing.monthly_rent <= user.budget_max)
+    if user.furnishing_prefs:
+        stmt = stmt.where(Listing.furnishing.in_(user.furnishing_prefs))
+    if user.move_in_pref is not None:
+        stmt = stmt.where(Listing.move_in <= user.move_in_pref)
+    if user.gender == GENDER_MALE:
+        stmt = stmt.where(
+            Listing.gender_pref.in_([LISTING_GENDER_PREF_BOYS_ONLY, LISTING_GENDER_PREF_MIXED])
+        )
+    elif user.gender == GENDER_FEMALE:
+        stmt = stmt.where(
+            Listing.gender_pref.in_([LISTING_GENDER_PREF_GIRLS_ONLY, LISTING_GENDER_PREF_MIXED])
+        )
+    elif user.gender == GENDER_OTHER:
+        stmt = stmt.where(Listing.gender_pref == LISTING_GENDER_PREF_MIXED)
+
+    stmt = stmt.order_by(Listing.created_at.desc())
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
