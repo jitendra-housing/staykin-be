@@ -106,5 +106,7 @@ class UserOut(BaseModel):
     move_in_date: date | None
     gender_pref: int | None
 
+    listing_ids: list[int] = []
+
     created_at: datetime
     updated_at: datetime

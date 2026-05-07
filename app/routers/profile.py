@@ -3,14 +3,25 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
+from app.models.listing import Listing
 from app.models.user import User
 from app.schemas.user import UserOut, UserUpdate, UserUpsert
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 
+async def _user_out(db: AsyncSession, user: User) -> UserOut:
+    result = await db.execute(
+        select(Listing.id)
+        .where(Listing.owner_user_id == user.id)
+        .order_by(Listing.created_at.desc())
+    )
+    listing_ids = [lid for (lid,) in result.all()]
+    return UserOut.model_validate(user).model_copy(update={"listing_ids": listing_ids})
+
+
 @router.post("", response_model=UserOut)
-async def upsert_profile(payload: UserUpsert, db: AsyncSession = Depends(get_db)) -> User:
+async def upsert_profile(payload: UserUpsert, db: AsyncSession = Depends(get_db)) -> UserOut:
     """Create-or-update profile by phone. Phone is the identity."""
     result = await db.execute(select(User).where(User.phone == payload.phone))
     user = result.scalar_one_or_none()
@@ -25,22 +36,21 @@ async def upsert_profile(payload: UserUpsert, db: AsyncSession = Depends(get_db)
 
     await db.commit()
     await db.refresh(user)
-    return user
+    return await _user_out(db, user)
 
 
-@router.get("/{phone}", response_model=UserOut)
-async def get_profile_by_phone(phone: str, db: AsyncSession = Depends(get_db)) -> User:
-    result = await db.execute(select(User).where(User.phone == phone))
-    user = result.scalar_one_or_none()
+@router.get("/{user_id}", response_model=UserOut)
+async def get_profile(user_id: int, db: AsyncSession = Depends(get_db)) -> UserOut:
+    user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="profile not found")
-    return user
+    return await _user_out(db, user)
 
 
 @router.patch("/{user_id}", response_model=UserOut)
 async def update_profile(
     user_id: int, payload: UserUpdate, db: AsyncSession = Depends(get_db)
-) -> User:
+) -> UserOut:
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="profile not found")
@@ -50,7 +60,7 @@ async def update_profile(
 
     await db.commit()
     await db.refresh(user)
-    return user
+    return await _user_out(db, user)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
