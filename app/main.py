@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.routers import (
+    flatmates,
     health,
     lifestyle_tags,
     listings,
@@ -23,5 +24,6 @@ app.include_router(occupations.router)
 app.include_router(listings.router)
 app.include_router(uploads.router)
 app.include_router(teams.router)
+app.include_router(flatmates.router)
 app.include_router(requests.router)
 app.include_router(rooms.router)
