@@ -16,6 +16,8 @@ from app.schemas.team import (
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
+MAX_TEAM_MEMBERS = 4
+
 
 async def _team_or_404(db: AsyncSession, team_id: int) -> Team:
     team = await db.get(Team, team_id)
@@ -91,6 +93,12 @@ async def add_team_member(
     user = await db.get(User, payload.user_id)
     if user is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="user_id not found")
+
+    if len(await _members(db, team_id)) >= MAX_TEAM_MEMBERS:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=f"team already has the maximum of {MAX_TEAM_MEMBERS} members",
+        )
 
     member = TeamMember(team_id=team_id, user_id=payload.user_id)
     db.add(member)
