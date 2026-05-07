@@ -1,18 +1,17 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
-from app.models.enums import DecisionStatus, RequestStatus, RequestTargetKind
 
 
 class ConnectionRequest(Base):
     __tablename__ = "requests"
     __table_args__ = (
         CheckConstraint(
-            "(target_kind = 'USER' AND target_user_id IS NOT NULL AND target_team_id IS NULL)"
-            " OR (target_kind = 'TEAM' AND target_team_id IS NOT NULL AND target_user_id IS NULL)",
+            "(target_kind = 1 AND target_user_id IS NOT NULL AND target_team_id IS NULL)"
+            " OR (target_kind = 2 AND target_team_id IS NOT NULL AND target_user_id IS NULL)",
             name="ck_requests_target_consistency",
         ),
     )
@@ -21,18 +20,14 @@ class ConnectionRequest(Base):
     from_user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    target_kind: Mapped[RequestTargetKind] = mapped_column(
-        Enum(RequestTargetKind, name="request_target_kind"), nullable=False
-    )
+    target_kind: Mapped[int] = mapped_column(Integer, nullable=False)
     target_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
     )
     target_team_id: Mapped[int | None] = mapped_column(
         ForeignKey("teams.id", ondelete="CASCADE"), nullable=True, index=True
     )
-    status: Mapped[RequestStatus] = mapped_column(
-        Enum(RequestStatus, name="request_status"), nullable=False
-    )
+    status: Mapped[int] = mapped_column(Integer, nullable=False)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     created_at: Mapped[datetime] = mapped_column(
@@ -55,9 +50,7 @@ class ConnectionRequestDecision(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
     )
-    decision: Mapped[DecisionStatus] = mapped_column(
-        Enum(DecisionStatus, name="decision_status"), nullable=False
-    )
+    decision: Mapped[int] = mapped_column(Integer, nullable=False)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

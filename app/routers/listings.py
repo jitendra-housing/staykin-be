@@ -3,7 +3,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
-from app.models.enums import BHK, ListingGenderPref, MoveIn
 from app.models.listing import Listing
 from app.models.user import User
 from app.schemas.listing import ListingCreate, ListingOut, ListingUpdate
@@ -30,10 +29,10 @@ async def create_listing(
 async def list_listings(
     db: AsyncSession = Depends(get_db),
     locality_id: int | None = Query(default=None),
-    bhk: BHK | None = Query(default=None),
+    bhk: int | None = Query(default=None),
     max_rent: int | None = Query(default=None, ge=0),
-    gender_pref: ListingGenderPref | None = Query(default=None),
-    move_in: MoveIn | None = Query(default=None),
+    gender_pref: int | None = Query(default=None),
+    move_in: int | None = Query(default=None),
 ) -> list[Listing]:
     stmt = select(Listing).order_by(Listing.created_at.desc())
     if locality_id is not None:

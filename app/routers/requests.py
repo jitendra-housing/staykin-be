@@ -6,8 +6,19 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
+from app.db.seeds.decision_statuses import (
+    DECISION_ACCEPTED,
+    DECISION_PENDING,
+    DECISION_REJECTED,
+)
+from app.db.seeds.request_statuses import (
+    REQUEST_STATUS_ACCEPTED,
+    REQUEST_STATUS_IN_PROGRESS,
+    REQUEST_STATUS_REJECTED,
+    VALID_REQUEST_STATUS_IDS,
+)
+from app.db.seeds.request_target_kinds import TARGET_KIND_TEAM, TARGET_KIND_USER
 from app.models.connection_request import ConnectionRequest, ConnectionRequestDecision
-from app.models.enums import DecisionStatus, RequestStatus, RequestTargetKind
 from app.models.room import Room, RoomParticipant
 from app.models.team import Team, TeamMember
 from app.models.user import User
@@ -61,7 +72,7 @@ async def create_request(
     target_team_id: int | None = None
     decider_ids: list[int] = []
 
-    if payload.target_kind == RequestTargetKind.USER:
+    if payload.target_kind == TARGET_KIND_USER:
         if payload.target_id == payload.from_user_id:
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST, detail="cannot send request to yourself"
@@ -97,7 +108,7 @@ async def create_request(
         target_kind=payload.target_kind,
         target_user_id=target_user_id,
         target_team_id=target_team_id,
-        status=RequestStatus.IN_PROGRESS,
+        status=REQUEST_STATUS_IN_PROGRESS,
     )
     db.add(req)
     try:
@@ -111,7 +122,7 @@ async def create_request(
     for uid in decider_ids:
         db.add(
             ConnectionRequestDecision(
-                request_id=req.id, user_id=uid, decision=DecisionStatus.PENDING
+                request_id=req.id, user_id=uid, decision=DECISION_PENDING
             )
         )
     await db.commit()
@@ -121,12 +132,21 @@ async def create_request(
     return _to_detail(req, decisions)
 
 
+def _validate_status_filter(v: int | None) -> int | None:
+    if v is None:
+        return v
+    if v not in VALID_REQUEST_STATUS_IDS:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"unknown status id: {v}")
+    return v
+
+
 @router.get("/sent", response_model=list[RequestOut])
 async def list_sent_requests(
     db: AsyncSession = Depends(get_db),
     user_id: int = Query(..., description="sender's user id"),
-    status_filter: RequestStatus | None = Query(default=None, alias="status"),
+    status_filter: int | None = Query(default=None, alias="status"),
 ) -> list[ConnectionRequest]:
+    status_filter = _validate_status_filter(status_filter)
     stmt = (
         select(ConnectionRequest)
         .where(ConnectionRequest.from_user_id == user_id)
@@ -143,8 +163,9 @@ async def list_sent_requests(
 async def list_received_requests(
     db: AsyncSession = Depends(get_db),
     user_id: int = Query(..., description="recipient's user id"),
-    status_filter: RequestStatus | None = Query(default=None, alias="status"),
+    status_filter: int | None = Query(default=None, alias="status"),
 ) -> list[ConnectionRequest]:
+    status_filter = _validate_status_filter(status_filter)
     stmt = (
         select(ConnectionRequest)
         .join(
@@ -171,10 +192,10 @@ async def get_request(
 
 
 async def _record_decision(
-    db: AsyncSession, request_id: int, user_id: int, decision: DecisionStatus
+    db: AsyncSession, request_id: int, user_id: int, decision: int
 ) -> RequestDetailOut:
     req = await _request_or_404(db, request_id)
-    if req.status != RequestStatus.IN_PROGRESS:
+    if req.status != REQUEST_STATUS_IN_PROGRESS:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail="request is no longer open"
         )
@@ -186,25 +207,25 @@ async def _record_decision(
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail="user is not a decider on this request"
         )
-    if row.decision != DecisionStatus.PENDING:
+    if row.decision != DECISION_PENDING:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="decision already made")
 
     now = datetime.now(timezone.utc)
     row.decision = decision
     row.decided_at = now
 
-    if decision == DecisionStatus.REJECTED:
-        req.status = RequestStatus.REJECTED
+    if decision == DECISION_REJECTED:
+        req.status = REQUEST_STATUS_REJECTED
         req.decided_at = now
     else:
         pending_res = await db.execute(
             select(ConnectionRequestDecision).where(
                 ConnectionRequestDecision.request_id == request_id,
-                ConnectionRequestDecision.decision == DecisionStatus.PENDING,
+                ConnectionRequestDecision.decision == DECISION_PENDING,
             )
         )
         if pending_res.scalars().first() is None:
-            req.status = RequestStatus.ACCEPTED
+            req.status = REQUEST_STATUS_ACCEPTED
             req.decided_at = now
 
             room = Room(request_id=request_id)
@@ -212,7 +233,7 @@ async def _record_decision(
             await db.flush()
 
             participant_ids: set[int] = {req.from_user_id}
-            if req.target_kind == RequestTargetKind.USER and req.target_user_id is not None:
+            if req.target_kind == TARGET_KIND_USER and req.target_user_id is not None:
                 participant_ids.add(req.target_user_id)
             elif req.target_team_id is not None:
                 members_res = await db.execute(
@@ -237,7 +258,7 @@ async def accept_request(
     payload: RequestDecisionAction,
     db: AsyncSession = Depends(get_db),
 ) -> RequestDetailOut:
-    return await _record_decision(db, request_id, payload.user_id, DecisionStatus.ACCEPTED)
+    return await _record_decision(db, request_id, payload.user_id, DECISION_ACCEPTED)
 
 
 @router.post("/{request_id}/reject", response_model=RequestDetailOut)
@@ -246,4 +267,4 @@ async def reject_request(
     payload: RequestDecisionAction,
     db: AsyncSession = Depends(get_db),
 ) -> RequestDetailOut:
-    return await _record_decision(db, request_id, payload.user_id, DecisionStatus.REJECTED)
+    return await _record_decision(db, request_id, payload.user_id, DECISION_REJECTED)

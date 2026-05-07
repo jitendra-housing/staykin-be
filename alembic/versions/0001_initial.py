@@ -1,4 +1,9 @@
-"""initial schema: users, localities + seed Gurgaon localities"""
+"""initial schema: users, localities + seed Gurgaon localities
+
+All categorical fields (gender, bhk, room_type, furnishing, move_in, ...) are
+stored as integer ids referencing the constants in app/db/seeds/. No Postgres
+ENUM types are created here.
+"""
 
 from collections.abc import Sequence
 
@@ -14,26 +19,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-GENDER = ("MALE", "FEMALE", "OTHER")
-BHK = ("STUDIO", "ONE_BHK", "TWO_BHK", "THREE_BHK", "FOUR_BHK", "FIVE_BHK")
-ROOM_TYPE = ("SINGLE", "SHARING", "BOTH")
-FURNISHING = ("FULL", "SEMI", "UNFURNISHED")
-MOVE_IN = ("ASAP", "WITHIN_1_MONTH", "ONE_TO_THREE_MONTHS")
-
-
 def upgrade() -> None:
-    # Create enum types first (so ARRAY columns can reference them).
-    gender = postgresql.ENUM(*GENDER, name="gender")
-    gender_pref = postgresql.ENUM(*GENDER, name="gender_pref")
-    bhk = postgresql.ENUM(*BHK, name="bhk")
-    room_type = postgresql.ENUM(*ROOM_TYPE, name="room_type")
-    furnishing = postgresql.ENUM(*FURNISHING, name="furnishing")
-    move_in = postgresql.ENUM(*MOVE_IN, name="move_in")
-
-    bind = op.get_bind()
-    for enum in (gender, gender_pref, bhk, room_type, furnishing, move_in):
-        enum.create(bind, checkfirst=True)
-
     # Localities
     op.create_table(
         "localities",
@@ -59,60 +45,28 @@ def upgrade() -> None:
         "(SELECT MAX(id) FROM localities))"
     )
 
-    # Users
+    # Users — all categorical fields are integer ids.
     op.create_table(
         "users",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("phone", sa.String(length=20), nullable=False, unique=True),
         sa.Column("name", sa.String(length=120), nullable=True),
         sa.Column("age", sa.Integer(), nullable=True),
-        sa.Column(
-            "gender",
-            postgresql.ENUM(*GENDER, name="gender", create_type=False),
-            nullable=True,
-        ),
+        sa.Column("gender", sa.Integer(), nullable=True),
         sa.Column("occupation", sa.String(length=120), nullable=True),
         sa.Column("photo_url", sa.String(length=512), nullable=True),
+        sa.Column("lifestyle_tag_ids", postgresql.ARRAY(sa.Integer()), nullable=True),
         sa.Column(
-            "lifestyle_tag_ids",
-            postgresql.ARRAY(sa.Integer()),
-            nullable=True,
-        ),
-        sa.Column(
-            "preferred_locality_ids",
-            postgresql.ARRAY(sa.Integer()),
-            nullable=True,
+            "preferred_locality_ids", postgresql.ARRAY(sa.Integer()), nullable=True
         ),
         sa.Column("budget_min", sa.Integer(), nullable=True),
         sa.Column("budget_max", sa.Integer(), nullable=True),
-        sa.Column(
-            "bhk_prefs",
-            postgresql.ARRAY(postgresql.ENUM(*BHK, name="bhk", create_type=False)),
-            nullable=True,
-        ),
-        sa.Column(
-            "room_type_pref",
-            postgresql.ENUM(*ROOM_TYPE, name="room_type", create_type=False),
-            nullable=True,
-        ),
-        sa.Column(
-            "furnishing_prefs",
-            postgresql.ARRAY(
-                postgresql.ENUM(*FURNISHING, name="furnishing", create_type=False)
-            ),
-            nullable=True,
-        ),
-        sa.Column(
-            "move_in_pref",
-            postgresql.ENUM(*MOVE_IN, name="move_in", create_type=False),
-            nullable=True,
-        ),
+        sa.Column("bhk_prefs", postgresql.ARRAY(sa.Integer()), nullable=True),
+        sa.Column("room_type_pref", sa.Integer(), nullable=True),
+        sa.Column("furnishing_prefs", postgresql.ARRAY(sa.Integer()), nullable=True),
+        sa.Column("move_in_pref", sa.Integer(), nullable=True),
         sa.Column("move_in_date", sa.Date(), nullable=True),
-        sa.Column(
-            "gender_pref",
-            postgresql.ENUM(*GENDER, name="gender_pref", create_type=False),
-            nullable=True,
-        ),
+        sa.Column("gender_pref", sa.Integer(), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -133,13 +87,3 @@ def downgrade() -> None:
     op.drop_index("ix_users_phone", table_name="users")
     op.drop_table("users")
     op.drop_table("localities")
-
-    for name in (
-        "move_in",
-        "furnishing",
-        "room_type",
-        "bhk",
-        "gender_pref",
-        "gender",
-    ):
-        op.execute(f"DROP TYPE IF EXISTS {name}")
