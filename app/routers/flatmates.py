@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.core.db import get_db
+from app.core.vibe import vibe_score
+from app.models.listing import Listing
 from app.models.team import Team, TeamMember
 from app.models.user import User
 from app.schemas.flatmate import FlatmateItem, FlatmateTeamItem, FlatmateUserItem
@@ -52,20 +55,69 @@ def _prefs_match(a: User, b: User) -> bool:
     )
 
 
+async def _enrich(
+    db: AsyncSession, user: User, viewer: User | None
+) -> UserOut:
+    listings_res = await db.execute(
+        select(Listing.id)
+        .where(Listing.owner_user_id == user.id)
+        .order_by(Listing.created_at.desc())
+    )
+    listing_ids = [lid for (lid,) in listings_res.all()]
+
+    tm_self = aliased(TeamMember)
+    tm_other = aliased(TeamMember)
+    teammates_res = await db.execute(
+        select(tm_other.user_id)
+        .join(tm_self, tm_self.team_id == tm_other.team_id)
+        .where(tm_self.user_id == user.id, tm_other.user_id != user.id)
+        .distinct()
+    )
+    team_member_ids = [uid for (uid,) in teammates_res.all()]
+
+    score = (
+        vibe_score(viewer.lifestyle_tag_ids, user.lifestyle_tag_ids)
+        if viewer is not None and viewer.id != user.id
+        else None
+    )
+
+    return UserOut.model_validate(user).model_copy(
+        update={
+            "listing_ids": listing_ids,
+            "team_member_ids": team_member_ids,
+            "vibe_score": score,
+        }
+    )
+
+
 @router.get("/{user_id}", response_model=list[FlatmateItem])
 async def list_flatmates(
-    user_id: int, db: AsyncSession = Depends(get_db)
+    user_id: int,
+    viewer_id: int | None = Query(
+        None,
+        description=(
+            "REQUIRED to populate `vibe_score` on each returned user. "
+            "Without it, `vibe_score` is null for everyone."
+        ),
+    ),
+    db: AsyncSession = Depends(get_db),
 ) -> list[FlatmateItem]:
     """Return matching flatmates grouped by team.
 
-    Users whose search preferences exactly match the requester's are
-    collected, then any matched user that belongs to a team is folded
-    into a single team item (with all team members). Remaining matches
-    are returned as solo user items. The requester is excluded.
+    Users whose search preferences are compatible with the requester's are
+    collected (wildcard on absent values, intersection on lists, overlap on
+    budget). Users belonging to a team are folded into a single team item
+    (with all team members); the rest are solo user items. The requester is
+    excluded.
+
+    When `viewer_id` is provided, every returned user includes a
+    `vibe_score` (0–100) computed against the viewer's lifestyle tags.
     """
     requester = await db.get(User, user_id)
     if requester is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="user not found")
+
+    viewer = await db.get(User, viewer_id) if viewer_id is not None else None
 
     candidates = (
         await db.execute(select(User).where(User.id != user_id))
@@ -108,10 +160,10 @@ async def list_flatmates(
     seen_teams: set[int] = set()
     for u in matches:
         team = team_by_user.get(u.id)
-        # Treat legacy single-member teams as solo to keep the response invariant
+        # Treat single-member teams as solo to keep the response invariant
         # (team items always carry >=2 members).
         if team is None or len(members_by_team.get(team.id, [])) < 2:
-            items.append(FlatmateUserItem(user=UserOut.model_validate(u)))
+            items.append(FlatmateUserItem(user=await _enrich(db, u, viewer)))
             continue
         if team.id in seen_teams:
             continue
@@ -119,7 +171,9 @@ async def list_flatmates(
         items.append(
             FlatmateTeamItem(
                 team=TeamOut.model_validate(team),
-                members=[UserOut.model_validate(m) for m in members_by_team[team.id]],
+                members=[
+                    await _enrich(db, m, viewer) for m in members_by_team[team.id]
+                ],
             )
         )
     return items
