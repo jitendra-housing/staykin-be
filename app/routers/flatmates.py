@@ -12,21 +12,43 @@ from app.schemas.user import UserOut
 router = APIRouter(prefix="/flatmates", tags=["flatmates"])
 
 
-def _as_set(values: list[int] | None) -> frozenset[int]:
-    return frozenset(values or ())
+def _set_match(a: list[int] | None, b: list[int] | None) -> bool:
+    """A wildcard if either side has no preference, else require intersection."""
+    sa, sb = frozenset(a or ()), frozenset(b or ())
+    if not sa or not sb:
+        return True
+    return bool(sa & sb)
+
+
+def _scalar_match(a: object, b: object) -> bool:
+    """A wildcard if either side is None, else require equality."""
+    if a is None or b is None:
+        return True
+    return a == b
+
+
+def _budget_match(a: User, b: User) -> bool:
+    """A wildcard if either side has no full range, else require overlap."""
+    if (
+        a.budget_min is None
+        or a.budget_max is None
+        or b.budget_min is None
+        or b.budget_max is None
+    ):
+        return True
+    return a.budget_min <= b.budget_max and a.budget_max >= b.budget_min
 
 
 def _prefs_match(a: User, b: User) -> bool:
     return (
-        _as_set(a.preferred_locality_ids) == _as_set(b.preferred_locality_ids)
-        and _as_set(a.bhk_prefs) == _as_set(b.bhk_prefs)
-        and _as_set(a.furnishing_prefs) == _as_set(b.furnishing_prefs)
-        and a.budget_min == b.budget_min
-        and a.budget_max == b.budget_max
-        and a.room_type_pref == b.room_type_pref
-        and a.move_in_pref == b.move_in_pref
-        and a.move_in_date == b.move_in_date
-        and a.gender_pref == b.gender_pref
+        _set_match(a.preferred_locality_ids, b.preferred_locality_ids)
+        and _set_match(a.bhk_prefs, b.bhk_prefs)
+        and _set_match(a.furnishing_prefs, b.furnishing_prefs)
+        and _budget_match(a, b)
+        and _scalar_match(a.room_type_pref, b.room_type_pref)
+        and _scalar_match(a.move_in_pref, b.move_in_pref)
+        and _scalar_match(a.move_in_date, b.move_in_date)
+        and _scalar_match(a.gender_pref, b.gender_pref)
     )
 
 
