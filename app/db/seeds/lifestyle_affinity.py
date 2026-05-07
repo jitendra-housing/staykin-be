@@ -129,6 +129,109 @@ _AFFINITY_PAIRS: list[tuple[str, str, float]] = [
     # ── Indoor entertainment ──
     ("GAMERS", "MOVIE_NIGHTS", 0.45),
     ("GAMERS", "CREATIVE", 0.30),
+
+    # ─────────────────────────────────────────────────────────────────
+    # Weak signals (±0.2 to ±0.4): real interactions but not life-defining.
+    # Filled in to stop "no shared tags" from collapsing to a flat 50%.
+    # ─────────────────────────────────────────────────────────────────
+
+    # ── Late nights vs disciplined / early routines ──
+    ("LATE_NIGHTS", "FITNESS_FREAK", -0.40),  # sleep matters for training
+    ("LATE_NIGHTS", "SPORTY", -0.30),         # early matches/training
+    ("LATE_NIGHTS", "YOGA_CHAI", -0.30),      # calm wellness vs nightlife
+    ("LATE_NIGHTS", "OUTDOORSY", -0.20),      # outdoor plans tend to be early
+    ("LATE_NIGHTS", "NON_ALCOHOLIC", -0.20),  # late lifestyle correlates with drinking
+    ("LATE_NIGHTS", "SMOKE_FREE", -0.20),
+    ("LATE_NIGHTS", "FOODIES", 0.20),         # late dinners, midnight snacks
+
+    # ── Early birds clustering with structured living ──
+    ("EARLY_BIRDS", "CLEAN_FREAK", 0.30),     # both lean structured-morning
+    ("EARLY_BIRDS", "WFH_GRIND", 0.30),       # productive mornings
+    ("EARLY_BIRDS", "PLANT_PARENTS", 0.20),   # morning watering routine
+    ("EARLY_BIRDS", "PET_FRIENDLY", 0.20),    # morning walks
+
+    # ── Wanderer absence (can't tend to home/dependents) ──
+    ("WANDERER", "PET_FRIENDLY", -0.40),      # pet care needs presence
+    ("WANDERER", "PLANT_PARENTS", -0.40),     # plants die when away
+    ("WANDERER", "HOSTS_OFTEN", -0.20),       # hard to host while traveling
+    ("WANDERER", "SPORTY", 0.30),             # active travel
+    ("WANDERER", "YOGA_CHAI", 0.20),          # mindful explorers
+    ("WANDERER", "CHILL_VIBES", 0.20),
+
+    # ── Cleanliness / discipline cluster ──
+    ("CLEAN_FREAK", "QUIET_VIBES", 0.30),     # orderly calm
+    ("CLEAN_FREAK", "YOGA_CHAI", 0.30),       # mindful living
+    ("CLEAN_FREAK", "BOOKWORM", 0.20),
+    ("CLEAN_FREAK", "VEGAN", 0.20),
+    ("CLEAN_FREAK", "NON_ALCOHOLIC", 0.20),
+    ("CLEAN_FREAK", "FITNESS_FREAK", 0.20),
+
+    # ── Wellness extends into outdoors / focus ──
+    ("YOGA_CHAI", "OUTDOORSY", 0.30),
+    ("YOGA_CHAI", "SPORTY", 0.30),
+    ("YOGA_CHAI", "BOOKWORM", 0.30),
+    ("YOGA_CHAI", "WFH_GRIND", 0.20),
+    ("YOGA_CHAI", "CREATIVE", 0.20),
+
+    # ── Vegan / non-alcoholic / smoke-free expansions ──
+    ("VEGAN", "PLANT_PARENTS", 0.30),
+    ("VEGAN", "OUTDOORSY", 0.20),
+    ("VEGAN", "CHILL_VIBES", 0.20),
+    ("NON_ALCOHOLIC", "QUIET_VIBES", 0.30),
+    ("NON_ALCOHOLIC", "CHILL_VIBES", 0.20),
+    ("NON_ALCOHOLIC", "BOOKWORM", 0.20),
+    ("NON_ALCOHOLIC", "PLANT_PARENTS", 0.20),
+    ("NON_ALCOHOLIC", "HOSTS_OFTEN", -0.30),  # frequent hosting often involves alcohol
+    ("SMOKE_FREE", "WFH_GRIND", 0.30),        # clean air for work
+    ("SMOKE_FREE", "QUIET_VIBES", 0.20),
+    ("SMOKE_FREE", "BOOKWORM", 0.20),
+    ("SMOKE_FREE", "CHILL_VIBES", 0.20),
+    ("SMOKE_FREE", "PLANT_PARENTS", 0.30),
+    ("SMOKE_FREE", "OUTDOORSY", 0.20),
+    ("SMOKE_FREE", "HOSTS_OFTEN", -0.20),     # hosting parties often smoky
+
+    # ── Pets ──
+    ("PET_FRIENDLY", "WFH_GRIND", 0.30),      # pets thrive with WFH humans
+    ("PET_FRIENDLY", "FITNESS_FREAK", 0.20),
+    ("PET_FRIENDLY", "SPORTY", 0.20),
+    ("PET_FRIENDLY", "PARTY_OK", -0.30),      # pets stressed by parties
+
+    # ── Story / quiet entertainment ──
+    ("BOOKWORM", "MOVIE_NIGHTS", 0.30),       # both story consumers
+    ("MOVIE_NIGHTS", "QUIET_VIBES", 0.20),    # quiet shared viewing
+
+    # ── Music heads expansion ──
+    ("MUSIC_HEADS", "CHILL_VIBES", 0.30),     # background music = chill
+    ("MUSIC_HEADS", "MOVIE_NIGHTS", 0.20),
+    ("MUSIC_HEADS", "GAMERS", 0.30),
+
+    # ── Gamers vs active / focused ──
+    ("GAMERS", "WFH_GRIND", -0.30),           # gaming sessions disrupt work
+    ("GAMERS", "OUTDOORSY", -0.20),
+    ("GAMERS", "FITNESS_FREAK", -0.20),
+    ("GAMERS", "SPORTY", -0.20),
+
+    # ── Sporty expansion ──
+    ("SPORTY", "FOODIES", 0.20),              # athletes eat well
+    ("SPORTY", "VEGAN", 0.20),
+    ("SPORTY", "NON_ALCOHOLIC", 0.30),
+
+    # ── Outdoors expansion ──
+    ("OUTDOORSY", "CHILL_VIBES", 0.20),
+    ("OUTDOORSY", "NON_ALCOHOLIC", 0.20),
+
+    # ── Creative cluster ──
+    ("CREATIVE", "CHILL_VIBES", 0.20),
+
+    # ── Party clashes with disciplined / wellness lifestyles ──
+    ("PARTY_OK", "FITNESS_FREAK", -0.30),     # alcohol + bad sleep
+    ("PARTY_OK", "SPORTY", -0.30),
+    ("PARTY_OK", "YOGA_CHAI", -0.30),
+    ("PARTY_OK", "PLANT_PARENTS", -0.20),
+
+    # ── Hosts often vs wellness ──
+    ("HOSTS_OFTEN", "YOGA_CHAI", -0.20),
+    ("HOSTS_OFTEN", "FITNESS_FREAK", -0.10),
 ]
 
 
