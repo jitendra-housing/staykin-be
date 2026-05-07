@@ -1,4 +1,8 @@
-"""listings table + listing_gender_pref + amenity enums"""
+"""listings table; bhk, furnishing, move_in, gender_pref are integer ids.
+
+Only the `amenity` Postgres ENUM type is created here (kept as ENUM until the
+amenities vocabulary is finalized — at which point it converts to id-based too).
+"""
 
 from collections.abc import Sequence
 
@@ -12,19 +16,12 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-LISTING_GENDER_PREF = ("GIRLS_ONLY", "BOYS_ONLY", "MIXED")
 AMENITY = ("PARKING", "AC", "KITCHEN", "WASHING_MACHINE", "LIFT", "BALCONY", "POOL")
-BHK = ("STUDIO", "ONE_BHK", "TWO_BHK", "THREE_BHK", "FOUR_BHK", "FIVE_BHK")
-FURNISHING = ("FULL", "SEMI", "UNFURNISHED")
-MOVE_IN = ("ASAP", "WITHIN_1_MONTH", "ONE_TO_THREE_MONTHS")
 
 
 def upgrade() -> None:
     bind = op.get_bind()
-
-    listing_gender_pref = postgresql.ENUM(*LISTING_GENDER_PREF, name="listing_gender_pref")
     amenity = postgresql.ENUM(*AMENITY, name="amenity")
-    listing_gender_pref.create(bind, checkfirst=True)
     amenity.create(bind, checkfirst=True)
 
     op.create_table(
@@ -43,34 +40,16 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("monthly_rent", sa.Integer(), nullable=False),
-        sa.Column(
-            "bhk",
-            postgresql.ENUM(*BHK, name="bhk", create_type=False),
-            nullable=False,
-        ),
-        sa.Column(
-            "furnishing",
-            postgresql.ENUM(*FURNISHING, name="furnishing", create_type=False),
-            nullable=False,
-        ),
+        sa.Column("bhk", sa.Integer(), nullable=False),
+        sa.Column("furnishing", sa.Integer(), nullable=False),
         sa.Column("flatmates_needed", sa.Integer(), nullable=False),
-        sa.Column(
-            "gender_pref",
-            postgresql.ENUM(
-                *LISTING_GENDER_PREF, name="listing_gender_pref", create_type=False
-            ),
-            nullable=False,
-        ),
+        sa.Column("gender_pref", sa.Integer(), nullable=False),
         sa.Column(
             "amenities",
             postgresql.ARRAY(postgresql.ENUM(*AMENITY, name="amenity", create_type=False)),
             nullable=True,
         ),
-        sa.Column(
-            "move_in",
-            postgresql.ENUM(*MOVE_IN, name="move_in", create_type=False),
-            nullable=False,
-        ),
+        sa.Column("move_in", sa.Integer(), nullable=False),
         sa.Column("photos", postgresql.ARRAY(sa.String(length=512)), nullable=True),
         sa.Column(
             "created_at",
@@ -94,4 +73,3 @@ def downgrade() -> None:
     op.drop_index("ix_listings_owner_user_id", table_name="listings")
     op.drop_table("listings")
     op.execute("DROP TYPE IF EXISTS amenity")
-    op.execute("DROP TYPE IF EXISTS listing_gender_pref")

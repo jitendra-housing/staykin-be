@@ -1,17 +1,11 @@
 from datetime import datetime
 
-from sqlalchemy import ARRAY, DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy import ARRAY, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
-from app.models.enums import (
-    BHK,
-    Amenity,
-    Furnishing,
-    ListingGenderPref,
-    MoveIn,
-)
+from app.models.enums import Amenity
 
 
 class Listing(Base):
@@ -26,20 +20,14 @@ class Listing(Base):
     )
 
     monthly_rent: Mapped[int] = mapped_column(Integer, nullable=False)
-    bhk: Mapped[BHK] = mapped_column(Enum(BHK, name="bhk", create_type=False), nullable=False)
-    furnishing: Mapped[Furnishing] = mapped_column(
-        Enum(Furnishing, name="furnishing", create_type=False), nullable=False
-    )
+    bhk: Mapped[int] = mapped_column(Integer, nullable=False)
+    furnishing: Mapped[int] = mapped_column(Integer, nullable=False)
     flatmates_needed: Mapped[int] = mapped_column(Integer, nullable=False)
-    gender_pref: Mapped[ListingGenderPref] = mapped_column(
-        Enum(ListingGenderPref, name="listing_gender_pref"), nullable=False
-    )
+    gender_pref: Mapped[int] = mapped_column(Integer, nullable=False)
     amenities: Mapped[list[Amenity] | None] = mapped_column(
         ARRAY(PgEnum(Amenity, name="amenity", create_type=False))
     )
-    move_in: Mapped[MoveIn] = mapped_column(
-        Enum(MoveIn, name="move_in", create_type=False), nullable=False
-    )
+    move_in: Mapped[int] = mapped_column(Integer, nullable=False)
     photos: Mapped[list[str] | None] = mapped_column(ARRAY(String(512)))
 
     created_at: Mapped[datetime] = mapped_column(
