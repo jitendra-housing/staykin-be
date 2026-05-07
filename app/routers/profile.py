@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.core.db import get_db
 from app.core.vibe import vibe_score
 from app.models.listing import Listing
+from app.models.team import TeamMember
 from app.models.user import User
 from app.schemas.user import UserOut, UserUpdate, UserUpsert
 
@@ -14,19 +16,35 @@ router = APIRouter(prefix="/profile", tags=["profile"])
 async def _user_out(
     db: AsyncSession, user: User, viewer: User | None = None
 ) -> UserOut:
-    result = await db.execute(
+    listings_res = await db.execute(
         select(Listing.id)
         .where(Listing.owner_user_id == user.id)
         .order_by(Listing.created_at.desc())
     )
-    listing_ids = [lid for (lid,) in result.all()]
+    listing_ids = [lid for (lid,) in listings_res.all()]
+
+    tm_self = aliased(TeamMember)
+    tm_other = aliased(TeamMember)
+    teammates_res = await db.execute(
+        select(tm_other.user_id)
+        .join(tm_self, tm_self.team_id == tm_other.team_id)
+        .where(tm_self.user_id == user.id, tm_other.user_id != user.id)
+        .distinct()
+    )
+    team_member_ids = [uid for (uid,) in teammates_res.all()]
+
     score = (
         vibe_score(viewer.lifestyle_tag_ids, user.lifestyle_tag_ids)
         if viewer is not None and viewer.id != user.id
         else None
     )
+
     return UserOut.model_validate(user).model_copy(
-        update={"listing_ids": listing_ids, "vibe_score": score}
+        update={
+            "listing_ids": listing_ids,
+            "team_member_ids": team_member_ids,
+            "vibe_score": score,
+        }
     )
 
 
@@ -46,6 +64,16 @@ async def upsert_profile(payload: UserUpsert, db: AsyncSession = Depends(get_db)
 
     await db.commit()
     await db.refresh(user)
+    return await _user_out(db, user)
+
+
+@router.get("/by-phone/{phone}", response_model=UserOut)
+async def get_profile_by_phone(phone: str, db: AsyncSession = Depends(get_db)) -> UserOut:
+    """Lookup a user by phone. 404 signals 'create the profile' to the client."""
+    result = await db.execute(select(User).where(User.phone == phone))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="profile not found")
     return await _user_out(db, user)
 
 

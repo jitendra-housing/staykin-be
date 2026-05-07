@@ -8,3 +8,7 @@ ROOM_TYPES: list[tuple[int, str, str]] = [
 ]
 
 VALID_ROOM_TYPE_IDS: frozenset[int] = frozenset(r[0] for r in ROOM_TYPES)
+
+ROOM_TYPE_SINGLE_ROOM = 1
+ROOM_TYPE_SHARING = 2
+ROOM_TYPE_EITHER = 3

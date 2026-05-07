@@ -107,6 +107,7 @@ class UserOut(BaseModel):
     gender_pref: int | None
 
     listing_ids: list[int] = []
+    team_member_ids: list[int] = []
 
     vibe_score: int | None = None
 
