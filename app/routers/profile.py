@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
+from app.core.vibe import vibe_score
 from app.models.listing import Listing
 from app.models.user import User
 from app.schemas.user import UserOut, UserUpdate, UserUpsert
@@ -10,14 +11,23 @@ from app.schemas.user import UserOut, UserUpdate, UserUpsert
 router = APIRouter(prefix="/profile", tags=["profile"])
 
 
-async def _user_out(db: AsyncSession, user: User) -> UserOut:
+async def _user_out(
+    db: AsyncSession, user: User, viewer: User | None = None
+) -> UserOut:
     result = await db.execute(
         select(Listing.id)
         .where(Listing.owner_user_id == user.id)
         .order_by(Listing.created_at.desc())
     )
     listing_ids = [lid for (lid,) in result.all()]
-    return UserOut.model_validate(user).model_copy(update={"listing_ids": listing_ids})
+    score = (
+        vibe_score(viewer.lifestyle_tag_ids, user.lifestyle_tag_ids)
+        if viewer is not None and viewer.id != user.id
+        else None
+    )
+    return UserOut.model_validate(user).model_copy(
+        update={"listing_ids": listing_ids, "vibe_score": score}
+    )
 
 
 @router.post("", response_model=UserOut)
@@ -40,11 +50,18 @@ async def upsert_profile(payload: UserUpsert, db: AsyncSession = Depends(get_db)
 
 
 @router.get("/{user_id}", response_model=UserOut)
-async def get_profile(user_id: int, db: AsyncSession = Depends(get_db)) -> UserOut:
+async def get_profile(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    viewer_id: int | None = Query(
+        None, description="logged-in user id, used to compute vibe_score"
+    ),
+) -> UserOut:
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="profile not found")
-    return await _user_out(db, user)
+    viewer = await db.get(User, viewer_id) if viewer_id is not None else None
+    return await _user_out(db, user, viewer)
 
 
 @router.patch("/{user_id}", response_model=UserOut)
