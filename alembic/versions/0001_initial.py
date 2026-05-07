@@ -267,12 +267,19 @@ def upgrade() -> None:
             unique=True,
         ),
         sa.Column(
+            "flatmate_team_id",
+            sa.Integer(),
+            sa.ForeignKey("teams.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
             server_default=sa.func.now(),
             nullable=False,
         ),
     )
+    op.create_index("ix_rooms_flatmate_team_id", "rooms", ["flatmate_team_id"])
 
     op.create_table(
         "room_participants",
@@ -301,6 +308,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("ix_room_participants_user_id", table_name="room_participants")
     op.drop_table("room_participants")
+    op.drop_index("ix_rooms_flatmate_team_id", table_name="rooms")
     op.drop_table("rooms")
 
     op.drop_index("ix_request_decisions_user_id", table_name="request_decisions")
