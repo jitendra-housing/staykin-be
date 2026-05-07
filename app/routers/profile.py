@@ -8,7 +8,7 @@ from app.core.vibe import vibe_score
 from app.models.listing import Listing
 from app.models.team import TeamMember
 from app.models.user import User
-from app.schemas.user import UserOut, UserUpdate, UserUpsert
+from app.schemas.user import PhoneLookupOut, UserOut, UserUpdate, UserUpsert
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -67,14 +67,14 @@ async def upsert_profile(payload: UserUpsert, db: AsyncSession = Depends(get_db)
     return await _user_out(db, user)
 
 
-@router.get("/by-phone/{phone}", response_model=UserOut)
-async def get_profile_by_phone(phone: str, db: AsyncSession = Depends(get_db)) -> UserOut:
-    """Lookup a user by phone. 404 signals 'create the profile' to the client."""
-    result = await db.execute(select(User).where(User.phone == phone))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="profile not found")
-    return await _user_out(db, user)
+@router.get("/by-phone/{phone}", response_model=PhoneLookupOut)
+async def get_profile_by_phone(
+    phone: str, db: AsyncSession = Depends(get_db)
+) -> PhoneLookupOut:
+    """Lookup a user_id by phone. Returns user_id=-1 if no user with that phone."""
+    result = await db.execute(select(User.id).where(User.phone == phone))
+    row = result.scalar_one_or_none()
+    return PhoneLookupOut(user_id=row if row is not None else -1)
 
 
 @router.get("/{user_id}", response_model=UserOut)
