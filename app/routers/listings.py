@@ -1,6 +1,9 @@
+from collections.abc import Iterable
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.core.db import get_db
 from app.db.seeds.genders import GENDER_FEMALE, GENDER_MALE, GENDER_OTHER
@@ -11,10 +14,35 @@ from app.db.seeds.listing_gender_prefs import (
 )
 from app.db.seeds.room_types import ROOM_TYPE_EITHER
 from app.models.listing import Listing
+from app.models.team import TeamMember
 from app.models.user import User
-from app.schemas.listing import ListingCreate, ListingOut, ListingUpdate
+from app.schemas.listing import ListingCreate, ListingFeedOut, ListingOut, ListingUpdate
 
 router = APIRouter(prefix="/listings", tags=["listings"])
+
+
+async def _residents_count_map(
+    db: AsyncSession, owner_ids: Iterable[int]
+) -> dict[int, int]:
+    ids = list(set(owner_ids))
+    if not ids:
+        return {}
+    tm_self = aliased(TeamMember)
+    tm_other = aliased(TeamMember)
+    rows = await db.execute(
+        select(tm_self.user_id, func.count(distinct(tm_other.user_id)))
+        .select_from(tm_self)
+        .join(tm_other, tm_other.team_id == tm_self.team_id)
+        .where(tm_self.user_id.in_(ids))
+        .group_by(tm_self.user_id)
+    )
+    return {uid: cnt for uid, cnt in rows.all()}
+
+
+def _with_residents(listing: Listing, count_map: dict[int, int]) -> ListingFeedOut:
+    n = max(1, count_map.get(listing.owner_user_id, 0))
+    base = ListingOut.model_validate(listing).model_dump()
+    return ListingFeedOut(**base, total_residents=n)
 
 
 @router.post("", response_model=ListingOut, status_code=status.HTTP_201_CREATED)
@@ -32,11 +60,11 @@ async def create_listing(
     return listing
 
 
-@router.get("", response_model=list[ListingOut])
+@router.get("", response_model=list[ListingFeedOut])
 async def list_listings(
     db: AsyncSession = Depends(get_db),
     user_id: int = Query(..., description="viewing user's id; filters from their profile prefs"),
-) -> list[Listing]:
+) -> list[ListingFeedOut]:
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="user not found")
@@ -68,15 +96,20 @@ async def list_listings(
 
     stmt = stmt.order_by(Listing.created_at.desc())
     result = await db.execute(stmt)
-    return list(result.scalars().all())
+    listings = list(result.scalars().all())
+    counts = await _residents_count_map(db, (l.owner_user_id for l in listings))
+    return [_with_residents(l, counts) for l in listings]
 
 
-@router.get("/{listing_id}", response_model=ListingOut)
-async def get_listing(listing_id: int, db: AsyncSession = Depends(get_db)) -> Listing:
+@router.get("/{listing_id}", response_model=ListingFeedOut)
+async def get_listing(
+    listing_id: int, db: AsyncSession = Depends(get_db)
+) -> ListingFeedOut:
     listing = await db.get(Listing, listing_id)
     if listing is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="listing not found")
-    return listing
+    counts = await _residents_count_map(db, [listing.owner_user_id])
+    return _with_residents(listing, counts)
 
 
 @router.patch("/{listing_id}", response_model=ListingOut)
