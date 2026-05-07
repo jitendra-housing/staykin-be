@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 
 class TeamCreate(BaseModel):
     owner_user_id: int
+    member_user_id: int
     name: str | None = None
 
 

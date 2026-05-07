@@ -33,14 +33,24 @@ async def _members(db: AsyncSession, team_id: int) -> list[TeamMember]:
 
 @router.post("", response_model=TeamDetailOut, status_code=status.HTTP_201_CREATED)
 async def create_team(payload: TeamCreate, db: AsyncSession = Depends(get_db)) -> TeamDetailOut:
+    if payload.owner_user_id == payload.member_user_id:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="member_user_id must differ from owner_user_id",
+        )
+
     owner = await db.get(User, payload.owner_user_id)
     if owner is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="owner_user_id not found")
+    member = await db.get(User, payload.member_user_id)
+    if member is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="member_user_id not found")
 
     team = Team(owner_user_id=payload.owner_user_id, name=payload.name)
     db.add(team)
     await db.flush()
     db.add(TeamMember(team_id=team.id, user_id=payload.owner_user_id))
+    db.add(TeamMember(team_id=team.id, user_id=payload.member_user_id))
     await db.commit()
     await db.refresh(team)
 
@@ -105,5 +115,11 @@ async def remove_team_member(
     member = await db.get(TeamMember, {"team_id": team_id, "user_id": user_id})
     if member is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="member not found")
-    await db.delete(member)
+
+    remaining = len(await _members(db, team_id)) - 1
+    if remaining < 2:
+        # Teams must have >=2 members; disband instead of leaving a stub.
+        await db.delete(team)
+    else:
+        await db.delete(member)
     await db.commit()

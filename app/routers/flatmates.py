@@ -86,7 +86,9 @@ async def list_flatmates(
     seen_teams: set[int] = set()
     for u in matches:
         team = team_by_user.get(u.id)
-        if team is None:
+        # Treat legacy single-member teams as solo to keep the response invariant
+        # (team items always carry >=2 members).
+        if team is None or len(members_by_team.get(team.id, [])) < 2:
             items.append(FlatmateUserItem(user=UserOut.model_validate(u)))
             continue
         if team.id in seen_teams:
