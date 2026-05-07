@@ -115,3 +115,7 @@ class ListingOut(BaseModel):
     photos: list[str] | None
     created_at: datetime
     updated_at: datetime
+
+
+class ListingFeedOut(ListingOut):
+    total_residents: int
