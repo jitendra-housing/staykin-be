@@ -62,3 +62,4 @@ class RequestOut(BaseModel):
 
 class RequestDetailOut(RequestOut):
     decisions: list[RequestDecisionOut]
+    room_id: int | None = None

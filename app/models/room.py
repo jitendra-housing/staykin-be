@@ -15,6 +15,9 @@ class Room(Base):
         nullable=False,
         unique=True,
     )
+    flatmate_team_id: Mapped[int | None] = mapped_column(
+        ForeignKey("teams.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

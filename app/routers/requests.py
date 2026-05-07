@@ -51,12 +51,19 @@ async def _decisions(
     return list(result.scalars().all())
 
 
-def _to_detail(
-    req: ConnectionRequest, decisions: list[ConnectionRequestDecision]
+async def _to_detail(
+    db: AsyncSession,
+    req: ConnectionRequest,
+    decisions: list[ConnectionRequestDecision],
 ) -> RequestDetailOut:
+    room_id: int | None = None
+    if req.status == REQUEST_STATUS_ACCEPTED:
+        result = await db.execute(select(Room.id).where(Room.request_id == req.id))
+        room_id = result.scalar_one_or_none()
     return RequestDetailOut(
         **RequestOut.model_validate(req).model_dump(),
         decisions=[RequestDecisionOut.model_validate(d) for d in decisions],
+        room_id=room_id,
     )
 
 
@@ -129,7 +136,7 @@ async def create_request(
     await db.refresh(req)
 
     decisions = await _decisions(db, req.id)
-    return _to_detail(req, decisions)
+    return await _to_detail(db, req, decisions)
 
 
 def _validate_status_filter(v: int | None) -> int | None:
@@ -188,7 +195,7 @@ async def get_request(
 ) -> RequestDetailOut:
     req = await _request_or_404(db, request_id)
     decisions = await _decisions(db, request_id)
-    return _to_detail(req, decisions)
+    return await _to_detail(db, req, decisions)
 
 
 async def _record_decision(
@@ -218,38 +225,31 @@ async def _record_decision(
         req.status = REQUEST_STATUS_REJECTED
         req.decided_at = now
     else:
-        pending_res = await db.execute(
-            select(ConnectionRequestDecision).where(
-                ConnectionRequestDecision.request_id == request_id,
-                ConnectionRequestDecision.decision == DECISION_PENDING,
-            )
-        )
-        if pending_res.scalars().first() is None:
-            req.status = REQUEST_STATUS_ACCEPTED
-            req.decided_at = now
+        req.status = REQUEST_STATUS_ACCEPTED
+        req.decided_at = now
 
-            room = Room(request_id=request_id)
-            db.add(room)
-            await db.flush()
+        room = Room(request_id=request_id)
+        db.add(room)
+        await db.flush()
 
-            participant_ids: set[int] = {req.from_user_id}
-            if req.target_kind == TARGET_KIND_USER and req.target_user_id is not None:
-                participant_ids.add(req.target_user_id)
-            elif req.target_team_id is not None:
-                members_res = await db.execute(
-                    select(TeamMember.user_id).where(
-                        TeamMember.team_id == req.target_team_id
-                    )
+        participant_ids: set[int] = {req.from_user_id}
+        if req.target_kind == TARGET_KIND_USER and req.target_user_id is not None:
+            participant_ids.add(req.target_user_id)
+        elif req.target_team_id is not None:
+            members_res = await db.execute(
+                select(TeamMember.user_id).where(
+                    TeamMember.team_id == req.target_team_id
                 )
-                participant_ids.update(uid for (uid,) in members_res.all())
+            )
+            participant_ids.update(uid for (uid,) in members_res.all())
 
-            for uid in participant_ids:
-                db.add(RoomParticipant(room_id=room.id, user_id=uid))
+        for uid in participant_ids:
+            db.add(RoomParticipant(room_id=room.id, user_id=uid))
 
     await db.commit()
     await db.refresh(req)
     decisions = await _decisions(db, request_id)
-    return _to_detail(req, decisions)
+    return await _to_detail(db, req, decisions)
 
 
 @router.post("/{request_id}/accept", response_model=RequestDetailOut)
