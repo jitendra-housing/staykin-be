@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.core.logging import ErrorLoggingMiddleware, configure_logging
 from app.routers import (
     flatmates,
     health,
@@ -14,7 +15,10 @@ from app.routers import (
     uploads,
 )
 
+configure_logging()
+
 app = FastAPI(title="Staykin BE", version="0.1.0")
+app.add_middleware(ErrorLoggingMiddleware)
 
 app.include_router(health.router)
 app.include_router(profile.router)
