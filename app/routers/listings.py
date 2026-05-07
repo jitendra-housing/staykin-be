@@ -9,6 +9,7 @@ from app.db.seeds.listing_gender_prefs import (
     LISTING_GENDER_PREF_GIRLS_ONLY,
     LISTING_GENDER_PREF_MIXED,
 )
+from app.db.seeds.room_types import ROOM_TYPE_EITHER
 from app.models.listing import Listing
 from app.models.user import User
 from app.schemas.listing import ListingCreate, ListingOut, ListingUpdate
@@ -52,6 +53,8 @@ async def list_listings(
         stmt = stmt.where(Listing.furnishing.in_(user.furnishing_prefs))
     if user.move_in_pref is not None:
         stmt = stmt.where(Listing.move_in <= user.move_in_pref)
+    if user.room_type_pref is not None and user.room_type_pref != ROOM_TYPE_EITHER:
+        stmt = stmt.where(Listing.room_type.in_([user.room_type_pref, ROOM_TYPE_EITHER]))
     if user.gender == GENDER_MALE:
         stmt = stmt.where(
             Listing.gender_pref.in_([LISTING_GENDER_PREF_BOYS_ONLY, LISTING_GENDER_PREF_MIXED])

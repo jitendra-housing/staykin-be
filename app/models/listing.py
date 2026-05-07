@@ -20,6 +20,7 @@ class Listing(Base):
     monthly_rent: Mapped[int] = mapped_column(Integer, nullable=False)
     bhk: Mapped[int] = mapped_column(Integer, nullable=False)
     furnishing: Mapped[int] = mapped_column(Integer, nullable=False)
+    room_type: Mapped[int] = mapped_column(Integer, nullable=False)
     flatmates_needed: Mapped[int] = mapped_column(Integer, nullable=False)
     gender_pref: Mapped[int] = mapped_column(Integer, nullable=False)
     amenities: Mapped[list[int] | None] = mapped_column(ARRAY(Integer))
